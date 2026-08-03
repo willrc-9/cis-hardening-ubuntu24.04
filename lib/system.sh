@@ -29,6 +29,17 @@ module_exists() {
 }
 
 is_pkg_installed() {
-    local pkg="$1"
-    dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null | grep -q "ok installed"
+	local pkg="$1"
+	dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null | grep -q "ok installed"
+}
+
+ask_yes_no() {
+	while true; do
+		read -r -p "$1 [y/n]: " response
+		case "${response,,}" in
+			y|yes) return 0 ;; # 0 means true/success in bash
+            		n|no) return 1 ;;  # 1 means false/failure
+            		*) echo "Please enter y or n." ;;
+        	esac
+    	done
 }
