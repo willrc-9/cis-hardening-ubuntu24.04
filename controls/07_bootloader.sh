@@ -56,21 +56,18 @@ manage_bootloader() {
 	fi
 		
 	# Apply Mode -------------------------------------------------------
-	log_info "Applying control: Securing Bootloader Configurations (CIS 1.4.2)"
-
-	# 1.4.2 - Ensure access to bootloader config is configured
-	if [[ -f "$grub_cfg" ]]; then
-		chown root:root "$grub_cfg"
-		chmod 400 "$grub_cfg"
-	fi
-
-	# Lock down the grub template files used to generate the config
-	if [[ -d "$grub_dir" ]]; then
-		chown -R root:root "$grub_dir"
-		chmod -R go-w "$grub_dir"
-	fi
-
-	log_success "Applied (1.4.2): Enforced strict permissions on GRUB configurations."
+    log_info "Applying control: Bootloader configurations"
+    if ask_yes_no "Restrict access to GRUB bootloader configuration?"; then
+        if [[ -f "/boot/grub/grub.cfg" ]]; then
+            chown root:root "/boot/grub/grub.cfg"
+            chmod 400 "/boot/grub/grub.cfg"
+        fi
+        if [[ -d "/etc/grub.d" ]]; then
+            chown -R root:root "/etc/grub.d"
+            chmod -R go-w "/etc/grub.d"
+        fi
+        log_success "Enforced strict permissions on GRUB configurations."
+    fi
 	
 }
 

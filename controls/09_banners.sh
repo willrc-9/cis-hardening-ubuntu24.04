@@ -64,52 +64,40 @@ manage_banners() {
 	# apply mode
 	log_info "Applying control: Command Line Warning Banners (CIS 1.6.x)"
 	log_info "To change the warning banner, please edit the banner_text variable in 09_banners.sh"
+	# --- APPLY MODE ---
+    log_info "Applying control: Command Line Warning Banners"
+    for file in "${files[@]}"; do
+        if ask_yes_no "Add warning banner and configure permissions for $file?"; then
+            echo "$banner_text" > "$file"
+            chown root:root "$file"
+            chmod 644 "$file"
+            log_success "Injected banner and secured $file"
+        fi
+    done
 
-	#1.6.1-1.6.3 write legal banner and remove os info
-	for file in "${files[@]}"; do
-		#create file if it doesnt exist, or overwrite it with the safe banner
-		echo "$banner_text" > "$file"
-	done
-	log_success "Applied (1.6.1 - 1.6.3): Injected standard legal banners."
+    if ask_yes_no "Disable dynamic MOTD scripts (pam_motd)?"; then
+        if [[ -d "/etc/update-motd.d" ]]; then chmod -R -x /etc/update-motd.d/ 2>/dev/null || true; fi
+        rm -f /run/motd.dynamic 2>/dev/null || true
+        for pam_file in "/etc/pam.d/login" "/etc/pam.d/sshd"; do
+            if [[ -f "$pam_file" ]]; then backup_file "$pam_file"; sed -i '/pam_motd.so motd=\/run\/motd.dynamic/s/^/#/' "$pam_file"; fi
+        done
+        log_success "Disabled dynamic pam_motd scripts."
+    fi
 
-	#1.6.4 disable MOTD scripts (pam_motd)
-	#Ubuntu dynamically updates the MOTD with system info. removing exec permissions stops this
-	if [[ -d "/etc/update-motd.d" ]]; then
-		chmod -R -x /etc/update-motd.d/ 2>/dev/null || true
-		log_success "Applied (1.6.4): Disabled dynamic pam_motd scripts."
-	fi
+    if ask_yes_no "Configure SSH daemon warning banner?"; then
+        if [[ -f /etc/ssh/sshd_config ]]; then
+            backup_file "/etc/ssh/sshd_config"
+            sed -i '/^Banner /d' /etc/ssh/sshd_config
+            sed -i '/^#Banner /d' /etc/ssh/sshd_config
+            echo "Banner /etc/issue.net" >> /etc/ssh/sshd_config
+            if systemctl is-active ssh >/dev/null 2>&1 || systemctl is-active sshd >/dev/null 2>&1; then
+                systemctl restart sshd >/dev/null 2>&1 || true
+            fi
+            log_success "Configured SSH daemon banner."
+        fi
+    fi
 
-	#1.6.5 configure ssh banner
-	if [[ -f /etc/ssh/sshd_config ]]; then
-		backup_file "/etc/ssh/sshd_config"
-
-		#remove existing banner directives to prevent duplicates
-		sed -i '/^Banner /d' /etc/ssh/sshd_config
-		sed -i '/^#Banner /d' /etc/ssh/sshd_config
-
-		#append the correct banner directive
-		echo "Banner /etc/issue.net" >> /etc/ssh/sshd_config
-
-		#restart ssh to apply changes if running
-		if systemctl is-active ssh >/dev/null 2>&1 || systemctl is-active sshd >/dev/null 2>&1; then
-			systemctl restart ssh >/dev/null 2>&1 || true
-		fi
-		log_success "Applied (1.6.5): Configured SSH daemon to use /etc/issue.net."
-	else
-		log_warn "SSH daemon is not installed. Skipping SSH banner configuration."
-	fi
-
-	#1.6.6-1.6.10 lock down permissions
-	for file in "${files[@]}"; do
-		if [[ -e "$file" ]]; then
-			chown root:root "$file"
-			chmod 644 "$file"
-		fi
-	done
-	log_success "Applied (1.6.6 - 1.6.10): Enforced strict permissions on banner files."
-
-	log_success "Command line warning banners configuration applied."
-}
+	}
 
 run_banners() {
 	log_info "Starting CIS Section 1.6: Configure Command Line Warning Banners"

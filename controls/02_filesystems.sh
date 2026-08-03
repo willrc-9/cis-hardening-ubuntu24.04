@@ -4,6 +4,7 @@ manage_kernel_module() {
   local module="$1"
   local conf_file="/etc/modprobe.d/cis_${module}.conf"
 
+  # --- AUDIT MODE ---
   if [[ "$MODE" == "audit" ]]; then
     local failed=0
     if is_module_loaded "$module"; then
@@ -20,20 +21,25 @@ manage_kernel_module() {
     return $failed
   fi
 
-  log_info "Applying control: Disabling kernel module '$module'"
+  # --- APPLY MODE ---
+  if ask_yes_no "Disable kernel module '$module'?"; then
+    log_info "Applying control: Disabling kernel module '$module'"
 
-  backup_file "$conf_file"
+    backup_file "$conf_file"
 
-  cat >"$conf_file" <<EOF
+    cat >"$conf_file" <<EOF
 install $module /bin/false
 blacklist $module
 EOF
 
-  if is_module_loaded "$module"; then
-    modprobe -r "$module" || log_warn "Could not remove in-use module: '$module'. A system reboot may be required."
-  fi
+    if is_module_loaded "$module"; then
+      modprobe -r "$module" || log_warn "Could not remove in-use module: '$module'. A system reboot may be required."
+    fi
 
-  log_success "Applied: Kernel module '$module' configuration enforced."
+    log_success "Applied: Kernel module '$module' configuration enforced."
+  else
+    log_info "Skipped disabling kernel module '$module'."
+  fi
 }
 
 run_filesystem() {
@@ -59,6 +65,16 @@ run_filesystem() {
 
     manage_kernel_module "$mod"
   done
+
+  # Prompt for custom additions during Apply mode
+  if [[ "$MODE" != "audit" ]]; then
+    read -r -p "Add any more filesystems to disable (space separated, press Enter to skip): " extra_fs
+    if [[ -n "$extra_fs" ]]; then
+        for mod in $extra_fs; do
+            manage_kernel_module "$mod"
+        done
+    fi
+  fi
 
   log_success "Filesystem hardening section completed."
 }

@@ -16,7 +16,7 @@ run_kernel_modules() {
     manage_kernel_module "$mod"
   done
 
-  log_success "Kerner module hardening completed."
+  log_success "Kernel module hardening completed."
 
 }
 

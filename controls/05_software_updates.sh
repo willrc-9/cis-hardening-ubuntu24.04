@@ -67,39 +67,23 @@ manage_software_updates() {
 	fi
 
 	# Apply mode ------------------------------------------------------------------
-	log_info "Applying control: Securing package management (CIS 1.2.1.x - 1.2.2.x)"
+    log_info "Applying control: Software Updates"
+    if ask_yes_no "Disable APT weak dependencies?"; then
+        echo 'APT::Install-Recommends "false";' > /etc/apt/apt.conf.d/60-disable-recommends
+        echo 'APT::Install-Suggests "false";' >> /etc/apt/apt.conf.d/60-disable-recommends
+        log_success "Disabled APT weak dependencies."
+    fi
 
-	# 1.2.1.1 - signed by
-	log_info "(1.2.1.1): Skipping automated 'Signed-By' enforcement to prevent breaking 3rd-party repos. Please configure manually."
-	
-	# 1.2.1.2 - weak deps
-	echo 'APT::Install-Recommends "false";' > "$weak_deps_conf"
-	echo 'APT::Install-Suggests "false";' >> "$weak_deps_conf"
-	log_success "Applied (1.2.1.2): Disabled weak dependencies."
+    if ask_yes_no "Apply APT directory permissions?"; then
+        chown -R root:root /etc/apt
+        find /etc/apt -type d -exec chmod 755 {} \;
+        log_success "Applied directory permissions to /etc/apt."
+    fi
 
-	# 1.2.1.4, 1.2.1.5, 1.2.1.7, 1.2.1.8: Apply Directory Permissions
-	for dir in /etc/apt/trusted.gpg.d /etc/apt/auth.conf.d /usr/share/keyrings /etc/apt/sources.list.d; do
-		if [[ -d "$dir" ]]; then
-            		chown root:root "$dir"
-            		chmod 755 "$dir"
-        fi
-done
-
-	# 1.2.1.3, 1.2.1.6, 1.2.1.9: Apply File Permissions
-	find /etc/apt/trusted.gpg.d -type f -exec chown root:root {} + -exec chmod 644 {} + 2>/dev/null || true
-    	find /usr/share/keyrings -type f -exec chown root:root {} + -exec chmod 644 {} + 2>/dev/null || true
-    	find /etc/apt/sources.list.d -type f -exec chown root:root {} + -exec chmod 644 {} + 2>/dev/null || true
-    
-    	# auth.conf.d holds credentials, so files must be 640
-    	find /etc/apt/auth.conf.d -type f -exec chown root:root {} + -exec chmod 640 {} + 2>/dev/null || true
-
-    	log_success "Applied (1.2.1.3 - 1.2.1.9): Enforced strict permissions on package manager directories and files."
-	# 1.2.2.1: Package Updates
-    	log_info "Applying pending package updates (this may take a moment)..."
-   	DEBIAN_FRONTEND=noninteractive apt-get update -qq
-    	DEBIAN_FRONTEND=noninteractive apt-get upgrade -y || log_warn "Failed to apply package updates."
-    
-    	log_success "Applied: Package management configuration enforced."
+    if ask_yes_no "Apply permissions to package manager files?"; then
+        find /etc/apt -type f -exec chmod 644 {} \;
+        log_success "Applied file permissions to /etc/apt files."
+    fi
 }
 
 run_software_updates() {

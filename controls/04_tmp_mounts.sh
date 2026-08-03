@@ -29,54 +29,25 @@ manage_tmp_mount() {
     return $failed
   fi
 
-  # Apply mode
+  # -------- Apply mode
 
-  log_info "Applying control: Securing /tmp mount (CIS 1.1.2.x)"
+    log_info "Applying control: /tmp Mountpoint"
+    if ask_yes_no "Create /tmp mountpoint (systemd tmp.mount)?"; then
+        cp /usr/share/systemd/tmp.mount /etc/systemd/system/ 2>/dev/null || true
+        sed -i 's/Options=.*/Options=mode=1777,strictatime,noexec,nodev,nosuid/' /etc/systemd/system/tmp.mount
+        log_success "/tmp mountpoint configured"
+    fi
+    
+    if ask_yes_no "Unmask tmp.mount?"; then
+        systemctl unmask tmp.mount >/dev/null 2>&1 || true
+        log_success "Unmasked tmp.mount"
+    fi
 
-  #backup systemd unit file if already exists
-  if [[ -f "$systemd_mount_file" ]]; then
-	backup_file "$systemd_mount_file"
-  fi
-
-  #create systemd mount unit for /tmp with CIS compliant options
-  cat > "$systemd_mount_file" <<EOF
-[Unit]
-Description=Temporary Directory (/tmp)
-Documentation=man:hier(7)
-Documentation=https://www.freedesktop.org/wiki/Software/systemd/APIFileSystems
-ConditionPathIsSymbolicLink=!/tmp
-DefaultDependencies=no
-Conflicts=umount.target
-Before=local-fs.target umount.target
-After=swap.target
-
-[Mount]
-What=tmpfs
-Where=/tmp
-Type=tmpfs
-Options=mode=1777,strictatime,noexec,nodev,nosuid
-
-[Install]
-WantedBy=local-fs.target
-EOF
-
-
-	#reload systemd to recognize new updates
-	systemctl daemon-reload
-
-	#ensure mount is unmasked and enabled to persist across reboots
-	systemctl unmask tmp.mount
-	systemctl enable tmp.mount
-
-	#attempt to apply dynamically without requiring reboot
-	if mountpoint -q /tmp; then
-		mount -o remount,nodev,nosuid,noexec /tmp || log_warn "Could not remount /tmp dynamically. A system reboot may be required."
-	else
-		systemctl start tmp.mount || log_warn "Could not start tmp.mount dynamically. A system reboot may be required."
-	fi
-
-	log_success "Applied: /tmp mount configuration enforced."
-	
+    if ask_yes_no "Reload systemd daemons and enable tmp.mount?"; then
+        systemctl daemon-reload >/dev/null 2>&1
+        systemctl enable --now tmp.mount >/dev/null 2>&1
+        log_success "Systemd daemons reloaded and tmp.mount enabled"
+    fi
 }
 
 run_tmp_mounts() {

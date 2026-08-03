@@ -67,79 +67,38 @@ manage_process_hardening() {
 	
 
 	# --- APPLY MODE ---
-	log_info "Applying control: Additional Process Hardening (CIS 1.5.x)"
+    log_info "Applying control: Process Hardening"
+    > "$sysctl_conf"
+    for key in "${!sysctls[@]}"; do
+        if ask_yes_no "Apply sysctl parameter: $key = ${sysctls[$key]}?"; then
+            echo "$key = ${sysctls[$key]}" >> "$sysctl_conf"
+            sysctl -w "$key=${sysctls[$key]}" >/dev/null 2>&1 || true
+            log_success "Applied $key"
+        fi
+    done
 
-	# 1.5.1 - 1.5.5, 1.5.8 - 1.5.9: Apply sysctl parameters
-	> "$sysctl_conf" # Clear or create the configuration file
-	for key in "${!sysctls[@]}"; do
-		local expected_val="${sysctls[$key]}"
-        
-		# Write to the permanent configuration file
-		echo "$key = $expected_val" >> "$sysctl_conf"
-        
-		# Apply dynamically to the live system
-		if ! sysctl -w "$key=$expected_val" >/dev/null 2>&1; then
-		log_warn "Failed to apply $key dynamically."
-		fi
-	done
-	log_success "Applied (1.5.1 - 1.5.9): Sysctl process hardening parameters configured."
-	
-	# 1.5.6: Remove prelink
-	if is_pkg_installed "prelink"; then
-		log_info "Removing 'prelink' package..."
-		DEBIAN_FRONTEND=noninteractive apt-get purge -y prelink >/dev/null 2>&1
-	fi
+    if ask_yes_no "Remove 'prelink' package?"; then
+        DEBIAN_FRONTEND=noninteractive apt-get purge -y prelink >/dev/null 2>&1 || true
+        log_success "Removed prelink"
+    fi
 
-	# 1.5.7: Disable Automatic Error Reporting (apport)
-	if systemctl is-enabled apport.service >/dev/null 2>&1 || systemctl is-active apport.service >/dev/null 2>&1; then
-		log_info "Disabling and masking apport service..."
-		systemctl stop apport.service >/dev/null 2>&1
-		systemctl disable apport.service >/dev/null 2>&1
-		systemctl mask apport.service >/dev/null 2>&1
-	fi
+    if ask_yes_no "Disable Automatic Error Reporting (apport)?"; then
+        systemctl stop apport.service >/dev/null 2>&1 || true
+        systemctl disable apport.service >/dev/null 2>&1 || true
+        systemctl mask apport.service >/dev/null 2>&1 || true
+        log_success "Disabled apport"
+    fi
 
-	# 1.5.10 & 1.5.11: Configure systemd-coredump
-	if [[ ! -f "$coredump_conf" ]]; then
-		log_info "$coredump_conf not found. Creating it..."
-		touch "$coredump_conf"
-		chmod 644 "$coredump_conf"
-		chown root:root "$coredump_conf"
-	else
-		backup_file "$coredump_conf"
-	fi
-        
-        # Ensure the [Coredump] section exists, otherwise appending might break the conf format
-	if ! grep -q "^\[Coredump\]" "$coredump_conf"; then
-		echo "[Coredump]" >> "$coredump_conf"
-	fi
-
-	# Remove existing uncommented configurations to prevent duplicates
-    	sed -i '/^Storage=/d' "$coredump_conf"
-    	sed -i '/^ProcessSizeMax=/d' "$coredump_conf"
-
-    	# Append the hardened values
-    	echo "Storage=none" >> "$coredump_conf"
-    	echo "ProcessSizeMax=0" >> "$coredump_conf"
-    
-    	systemctl daemon-reload >/dev/null 2>&1 || true
-    	log_success "Applied (1.5.10/11): systemd-coredump restricted."
-	#
-	if ! grep -q "^\[Coredump\]" "$coredump_conf"; then
-		echo -e "\n[Coredump]" >> "$coredump_conf"
-	fi
-
-	# Remove existing uncommented configurations to prevent duplicates
-	sed -i '/^Storage=/d' "$coredump_conf"
-	sed -i '/^ProcessSizeMax=/d' "$coredump_conf"
-
-	# Append the hardened values
-	echo "Storage=none" >> "$coredump_conf"
-	echo "ProcessSizeMax=0" >> "$coredump_conf"
-        
-	systemctl daemon-reload
-	log_success "Applied (1.5.10/11): systemd-coredump restricted."
-
-	log_success "Process Hardening configuration applied."
+    if ask_yes_no "Configure systemd-coredump?"; then
+        if [[ ! -f "$coredump_conf" ]]; then touch "$coredump_conf"; chmod 644 "$coredump_conf"; chown root:root "$coredump_conf"; else backup_file "$coredump_conf"; fi
+        if ! grep -q "^\[Coredump\]" "$coredump_conf"; then echo "[Coredump]" >> "$coredump_conf"; fi
+        sed -i '/^Storage=/d' "$coredump_conf"
+        sed -i '/^ProcessSizeMax=/d' "$coredump_conf"
+        echo "Storage=none" >> "$coredump_conf"
+        echo "ProcessSizeMax=0" >> "$coredump_conf"
+        systemctl daemon-reload >/dev/null 2>&1 || true
+        log_success "Configured systemd-coredump"
+    fi
 }
 
 run_process_hardening() {

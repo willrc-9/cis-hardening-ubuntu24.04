@@ -58,72 +58,75 @@ manage_gdm() {
     fi
 
     # --- APPLY MODE ---
-    log_info "Applying control: Configure GNOME Display Manager (CIS 1.7.x)"
-
+    log_info "Applying control: GNOME Display Manager"
     if ! is_pkg_installed "gdm3"; then
-        log_success "GNOME Display Manager (GDM) is not installed. Skipping GDM configurations."
+        log_success "GDM is not installed. Skipping."
         return 0
     fi
 
-    # Ensure required dconf directories exist
-    mkdir -p "$gdm_db_dir"
-    mkdir -p "$local_db_dir"
-    mkdir -p "$local_locks_dir"
-
-    # 1.7.1 & 1.7.2: Configure GDM Profile, Banner, and User List
-    echo -e "user-db:user\nsystem-db:gdm\nfile-db:/usr/share/gdm/greeter-dconf-defaults" > "$gdm_profile"
+    mkdir -p "$gdm_db_dir" "$local_db_dir" "$local_locks_dir"
     
-    cat <<EOF > "$gdm_db_dir/01-banner-and-login"
-[org/gnome/login-screen]
-banner-message-enable=true
-banner-message-text='$dconf_banner'
-disable-user-list=true
-EOF
+    local gdm_profile_content="user-db:user\nsystem-db:gdm\nfile-db:/usr/share/gdm/greeter-dconf-defaults\n"
+    local login_content="[org/gnome/login-screen]\n"
 
-    # 1.7.3 - 1.7.5: Configure Screen lock, automount, and autorun
-    # Create the user profile to look at the local dconf database
-    echo -e "user-db:user\nsystem-db:local" > "/etc/dconf/profile/user"
-
-    cat <<EOF > "$local_db_dir/00-security-settings"
-[org/gnome/desktop/screensaver]
-lock-enabled=true
-idle-activation-enabled=true
-
-[org/gnome/desktop/media-handling]
-automount=false
-automount-open=false
-autorun-never=true
-EOF
-
-    # Lock the settings so standard users cannot override them
-    cat <<EOF > "$local_locks_dir/00-security-settings-lock"
-/org/gnome/desktop/screensaver/lock-enabled
-/org/gnome/desktop/screensaver/idle-activation-enabled
-/org/gnome/desktop/media-handling/automount
-/org/gnome/desktop/media-handling/automount-open
-/org/gnome/desktop/media-handling/autorun-never
-EOF
-
-    # Update the dconf databases to apply the files we just created
-    dconf update >/dev/null 2>&1 || log_warn "Failed to execute 'dconf update'. Is dconf-cli installed?"
-
-    # 1.7.6 & 1.7.7: Disable XDMCP and configure Xwayland
-    if [[ -f "$gdm_custom" ]]; then
-        backup_file "$gdm_custom"
-        # Disable XDMCP by explicitly setting Enable=false under the [xdmcp] section
-        if grep -qi '\[xdmcp\]' "$gdm_custom"; then
-            sed -i '/\[xdmcp\]/a Enable=false' "$gdm_custom"
-            sed -i '/^\s*Enable\s*=\s*true/d' "$gdm_custom"
-        else
-            echo -e "\n[xdmcp]\nEnable=false" >> "$gdm_custom"
-        fi
-        
-        # Ensure Wayland is not disabled (which forces insecure X11/Xwayland)
-        sed -i 's/^WaylandEnable=false/#WaylandEnable=false/g' "$gdm_custom"
+    if ask_yes_no "Configure GDM banner message?"; then
+        login_content+="banner-message-enable=true\nbanner-message-text='$dconf_banner'\n"
+    fi
+    if ask_yes_no "Configure GDM disable-user-list?"; then
+        login_content+="disable-user-list=true\n"
     fi
 
-    log_success "Applied (1.7.1 - 1.7.7): GDM parameters and graphical restrictions enforced."
-}
+    # Only write to the login db if we added settings to it
+    if [[ "$login_content" != "[org/gnome/login-screen]\n" ]]; then
+        echo -e "$gdm_profile_content" > "$gdm_profile"
+        echo -e "$login_content" > "$gdm_db_dir/01-banner-and-login"
+        log_success "Configured GDM login settings."
+    fi
+
+    local sec_screensaver="[org/gnome/desktop/screensaver]\n"
+    local sec_media="[org/gnome/desktop/media-handling]\n"
+    local lock_content=""
+
+    if ask_yes_no "Configure GDM screen lock?"; then
+        sec_screensaver+="lock-enabled=true\nidle-activation-enabled=true\n"
+        lock_content+="/org/gnome/desktop/screensaver/lock-enabled\n/org/gnome/desktop/screensaver/idle-activation-enabled\n"
+    fi
+    if ask_yes_no "Configure GDM automount?"; then
+        sec_media+="automount=false\nautomount-open=false\n"
+        lock_content+="/org/gnome/desktop/media-handling/automount\n/org/gnome/desktop/media-handling/automount-open\n"
+    fi
+    if ask_yes_no "Configure GDM autorun-never?"; then
+        sec_media+="autorun-never=true\n"
+        lock_content+="/org/gnome/desktop/media-handling/autorun-never\n"
+    fi
+
+    if [[ -n "$lock_content" ]]; then
+        echo -e "user-db:user\nsystem-db:local" > "/etc/dconf/profile/user"
+        echo -e "${sec_screensaver}\n${sec_media}" > "$local_db_dir/00-security-settings"
+        echo -e "$lock_content" > "$local_locks_dir/00-security-settings-lock"
+        dconf update >/dev/null 2>&1 || log_warn "Failed to execute dconf update."
+        log_success "Configured GDM session security settings."
+    fi
+
+    if ask_yes_no "Disable XDMCP?"; then
+        if [[ -f "$gdm_custom" ]]; then
+            if grep -qi '\[xdmcp\]' "$gdm_custom"; then
+                sed -i '/\[xdmcp\]/a Enable=false' "$gdm_custom"
+                sed -i '/^\s*Enable\s*=\s*true/d' "$gdm_custom"
+            else
+                echo -e "\n[xdmcp]\nEnable=false" >> "$gdm_custom"
+            fi
+            log_success "Disabled XDMCP."
+        fi
+    fi
+
+    if ask_yes_no "Configure Xwayland (Enable Wayland)?"; then
+        if [[ -f "$gdm_custom" ]]; then
+            sed -i 's/^WaylandEnable=false/#WaylandEnable=false/g' "$gdm_custom"
+            log_success "Ensured Wayland is enabled."
+        fi
+    fi
+    }
 
 run_gdm() {
     log_info "Starting CIS Section 1.7: Configure GNOME Display Manager"

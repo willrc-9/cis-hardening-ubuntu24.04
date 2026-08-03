@@ -49,35 +49,32 @@ manage_apparmor() {
 	fi
 
 	# Apply Mode ----------------------------------------------------------------------
-	log_info "Applying control: Securing Mandatory Access Control (AppArmor) (CIS 1.3.1.x)"
+    log_info "Applying control: AppArmor"
+    if ask_yes_no "Install AppArmor and apparmor-utils?"; then
+        DEBIAN_FRONTEND=noninteractive apt-get update -qq
+        DEBIAN_FRONTEND=noninteractive apt-get install -y apparmor apparmor-utils || log_warn "Failed to install packages."
+    fi
 
-	# 1.3.1.1 - install apparmor
-	if !  is_pkg_installed "apparmor" || ! is_pkg_installed "apparmor-utils"; then
-		log_info "Installing apparmor and apparmor-utils..."
-		DEBIAN_FRONTEND=noninteractive apt-get install -y apparmor apparmor-utils || log_warn "Failed to install AppArmor packages."
-	fi
+    if ask_yes_no "Enable AppArmor in GRUB?"; then
+        if ! grep -q "apparmor=1" /etc/default/grub; then
+            backup_file "/etc/default/grub"
+            sed -i 's/^\(GRUB_CMDLINE_LINUX=".*\)"/\1 apparmor=1 security=apparmor"/' /etc/default/grub
+            update-grub >/dev/null 2>&1 || true
+            log_success "Updated GRUB configuration."
+        fi
+    fi
 
-	#1.3.1.2 enable apparmor in grub
-	if ! grep -q "apparmor=1" /etc/default/grub; then
-		backup_file "/etc/default/grub"
-		#safely append kernel parameters to GRUB_CMDLINE_LINUX
-		sed -i 's/^\(GRUB_CMDLINE_LINUX=".*\)"/\1 apparmor=1 security=apparmor"/' /etc/default/grub
-		update-grub >/dev/null 2>&1 || log_warn "Failed to update grub"
-		log_info "Updated GRUB configuration. A system reboot is required for these boot parameters to take effect."
-	fi
+    if ask_yes_no "Enforce all AppArmor profiles?"; then
+        systemctl enable --now apparmor >/dev/null 2>&1
+        aa-enforce /etc/apparmor.d/* >/dev/null 2>&1 || true
+        log_success "Set profiles to enforce mode."
+    fi
 
-	systemctl enable apparmor >/dev/null 2>&1
-	systemctl start apparmor >/dev/null 2>&1
-
-	#1.3.1.3 enforce all profiles
-	if command -v aa-enforce >/dev/null 2>&1; then
-		log_info "Setting all AppArmor profiles to enforce mode..."
-
-		aa-enforce /etc/apparmor.d/* >/dev/null 2>&1 || true
-	fi
-
-	log_success "Applied: AppArmor configuration enforced."
-
+    if ask_yes_no "Enable apparmor_restrict_unprivileged_unconfined?"; then
+        echo "kernel.apparmor_restrict_unprivileged_unconfined = 1" > "/etc/sysctl.d/60-apparmor.conf"
+        sysctl -w kernel.apparmor_restrict_unprivileged_unconfined=1 >/dev/null 2>&1 || true
+        log_success "Applied restrict_unprivileged_unconfined."
+    fi
 }
 
 run_apparmor() {
