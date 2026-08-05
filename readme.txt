@@ -9,11 +9,11 @@ OPTIONS
 	--list
 		Lists all modules for the user to run, each can be excluded or included
 
-	--include
+	--include <module_name>
 		Allows user to run harden.sh with only a specified modules selected
 		ex. "./harden.sh --include kernel_modules" will ONLY use the kernel_modules option during execution
 
-	--exclude
+	--exclude <module_name>
                 Allows user to run harden.sh without a specified module selected
                 ex. "./harden.sh --exclude kernel_modules" will use everything BUT kernel_modules option during execution
 
