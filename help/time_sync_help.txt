@@ -1,0 +1,23 @@
+In the event that you would like to disable either chrony or systemctl timesyncd, this is how you would do it:
+
+timesyncd:
+
+	# Disable timesyncd
+	~$ systemctl stop systemd-timesyncd
+	~$ systemctl mask systemd-timesyncd
+
+	# Completely remove package (optional)
+	~$ apt-get purge -y systemd-timesyncd
+
+chrony:
+	
+	# Disable chrony
+	~$ systemctl stop chrony
+	~$ systemctl mask chrony
+
+	# Completely remove package (optional)
+	~$ apt-get purge -y chrony
+
+To ensure that either service is disable, run the following command:
+
+	~$ systemctl status <service_name>
