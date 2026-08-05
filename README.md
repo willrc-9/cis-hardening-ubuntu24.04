@@ -28,4 +28,4 @@ A hardening script for Ubuntu 24.04 based on the CIS Ubuntu 24.04 v2.0.0 Level 1
 
 Copyright (c) 2026 William Collison. All rights reserved.
 
-You are free to download and use this software to harden your systems. However, you are strictly forbidden from modifying, adapting, or creating derivative works based upon this software. Distribution of altered versions is not permitted. 
+You are free to download and use this software to harden your systems. However, you are strictly forbidden from modifying, adapting, or creating derivative works based upon this software. Distribution of altered versions is not permitted. A template is available if you choose to make your own copy of this set of scripts.
