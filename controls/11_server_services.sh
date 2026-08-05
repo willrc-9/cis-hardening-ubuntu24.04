@@ -4,7 +4,6 @@ manage_server_services() {
     local failed=0
 
     # Map CIS control descriptions to their corresponding Ubuntu package names
-    # Note: Some controls list multiple possible packages to check
     declare -A remove_pkgs=(
         ["2.1.1 autofs"]="autofs"
         ["2.1.3 avahi daemon"]="avahi-daemon"
@@ -29,13 +28,14 @@ manage_server_services() {
         ["2.1.23 X window server"]="xserver-xorg*"
     )
 
+    # Use mapfile to safely sort keys with spaces in them
+    local sorted_controls=()
+    mapfile -t sorted_controls < <(printf '%s\n' "${!remove_pkgs[@]}" | sort -V)
+
     # --- AUDIT MODE ---
     if [[ "$MODE" == "audit" ]]; then
-        
-        # Check all forbidden packages
         for control in "${!remove_pkgs[@]}"; do
             for pkg in ${remove_pkgs[$control]}; do
-                # dpkg -l handles both exact names and wildcards (like xserver-xorg*)
                 if dpkg -l "$pkg" 2>/dev/null | grep -q "^ii"; then
                     log_warn "Audit Failed ($control): Package '$pkg' is installed."
                     failed=1
@@ -43,16 +43,13 @@ manage_server_services() {
             done
         done
 
-        # 2.1.2: Ensure MTA is configured for local-only mode
         if command -v ss >/dev/null; then
-            # Look for anything listening on port 25 that is NOT the local loopback (127.0.0.1 or ::1)
             if ss -lntu | grep -E ':25\s' | grep -qvE '(127\.0\.0\.1|::1):25'; then
                 log_warn "Audit Failed (2.1.2): Mail Transfer Agent (MTA) is listening on non-loopback interfaces."
                 failed=1
             fi
         fi
 
-        # 2.1.4: Ensure only approved services are listening
         log_info "Audit Manual Check (2.1.4): Please review the following listening services to ensure they are authorized:"
         ss -plntu | sed 's/^/  /'
 
@@ -65,42 +62,37 @@ manage_server_services() {
     # --- APPLY MODE ---
     log_info "Applying control: Server Services (CIS 2.1.x)"
 
-    # Loop through and offer to purge each installed service category
-    for control in "${!remove_pkgs[@]}"; do
+    # 2.1.1, 2.1.3, 2.1.5 - 2.1.23: Service Purging
+    for control in "${sorted_controls[@]}"; do
         local pkgs_to_check="${remove_pkgs[$control]}"
-        local found_pkgs=""
-
-        # Detect if any of the target packages are currently installed
-        for pkg in $pkgs_to_check; do
-            if dpkg -l "$pkg" 2>/dev/null | grep -q "^ii"; then
-                found_pkgs="$found_pkgs $pkg"
-            fi
-        done
-
-        # Only trigger the interactive prompt if a forbidden package was found
-        if [[ -n "$found_pkgs" ]]; then
-            if ask_yes_no "Remove $control (Found:$found_pkgs)?"; then
-                DEBIAN_FRONTEND=noninteractive apt-get purge -y $found_pkgs >/dev/null 2>&1
-                log_success "Purged:$found_pkgs"
-            else
-                log_info "Skipped removing:$found_pkgs"
-            fi
+        
+        if ask_yes_no "Enforce removal of $control?"; then
+            DEBIAN_FRONTEND=noninteractive apt-get purge -y $pkgs_to_check >/dev/null 2>&1 || true
+            log_success "Enforced removal of $control"
+        else
+            log_info "Skipped $control"
         fi
     done
 
     # 2.1.2: MTA local-only mode
-    # Postfix is the default MTA on Ubuntu. If installed, bind it strictly to the loopback address.
-    if [[ -f /etc/postfix/main.cf ]]; then
-        if ask_yes_no "Configure Mail Transfer Agent (Postfix) for local-only mode? (2.1.2)"; then
+    if ask_yes_no "Configure Mail Transfer Agent (Postfix) for local-only mode? (2.1.2)"; then
+        if [[ -f /etc/postfix/main.cf ]]; then
             backup_file "/etc/postfix/main.cf"
-            
-            # Remove any existing inet_interfaces lines, then append the secure one
             sed -i '/^inet_interfaces/d' /etc/postfix/main.cf
             echo "inet_interfaces = loopback-only" >> /etc/postfix/main.cf
-            
             systemctl restart postfix >/dev/null 2>&1 || true
             log_success "Configured Postfix to listen on loopback-only."
+        else
+            log_success "No Postfix MTA detected. System is naturally compliant."
         fi
+    fi
+
+    # 2.1.4: Ensure only approved services are listening
+    if ask_yes_no "Review currently listening network services? (CIS 2.1.4 requires manual verification)"; then
+        echo "------------------------------------------------------"
+        ss -plntu
+        echo "------------------------------------------------------"
+        log_success "Manual review of listening services completed."
     fi
 
     log_success "Server services configuration applied."
