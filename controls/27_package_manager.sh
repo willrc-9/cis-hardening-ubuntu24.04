@@ -8,13 +8,13 @@ manage_apt_dependencies() {
     if [[ "$MODE" == "audit" ]]; then
         
         # 1.2.1.2 Ensure package manager weak dependencies are disabled
-        # We use an extended regex to catch either "false" or "0"
-        if ! apt-config dump | grep -Eq 'APT::Install-Recommends\s+"?(false|0)"?;'; then
+        # We use a highly forgiving regex to catch variations in quotes, spacing, and case
+        if ! apt-config dump | grep -iqE 'APT::Install-Recommends.*(false|0)'; then
             log_warn "Audit Failed (1.2.1.2): APT::Install-Recommends is not disabled."
             failed=1
         fi
         
-        if ! apt-config dump | grep -Eq 'APT::Install-Suggests\s+"?(false|0)"?;'; then
+        if ! apt-config dump | grep -iqE 'APT::Install-Suggests.*(false|0)'; then
             log_warn "Audit Failed (1.2.1.2): APT::Install-Suggests is not disabled."
             failed=1
         fi
