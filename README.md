@@ -24,6 +24,10 @@ A hardening script for Ubuntu 24.04 based on the CIS Ubuntu 24.04 v2.0.0 Level 1
 * **`--all`**  
   Runs all modules during execution.
 
+## Important Notes
+
+* Add in custom Banner to the 09 and 10 in /controls
+
 ## License
 
 Copyright (c) 2026 William Collison. All rights reserved.
