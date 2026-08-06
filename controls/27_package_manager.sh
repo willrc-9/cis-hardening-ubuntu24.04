@@ -7,14 +7,18 @@ manage_apt_dependencies() {
     # --- AUDIT MODE ---
     if [[ "$MODE" == "audit" ]]; then
         
+        # Capture output first to avoid SIGPIPE crashes if 'set -o pipefail' is enabled
+        local apt_dump
+        apt_dump=$(apt-config dump 2>/dev/null)
+
         # 1.2.1.2 Ensure package manager weak dependencies are disabled
-        # We use a highly forgiving regex to catch variations in quotes, spacing, and case
-        if ! apt-config dump | grep -iqE 'APT::Install-Recommends.*(false|0)'; then
+        # Using standard >/dev/null instead of -q to ensure the pipeline finishes cleanly
+        if ! echo "$apt_dump" | grep -iE 'APT::Install-Recommends.*(false|0)' > /dev/null; then
             log_warn "Audit Failed (1.2.1.2): APT::Install-Recommends is not disabled."
             failed=1
         fi
         
-        if ! apt-config dump | grep -iqE 'APT::Install-Suggests.*(false|0)'; then
+        if ! echo "$apt_dump" | grep -iE 'APT::Install-Suggests.*(false|0)' > /dev/null; then
             log_warn "Audit Failed (1.2.1.2): APT::Install-Suggests is not disabled."
             failed=1
         fi
@@ -28,7 +32,6 @@ manage_apt_dependencies() {
     # --- APPLY MODE ---
     log_info "Applying control: Disable APT Weak Dependencies (CIS 1.2.1.2)"
     if ask_yes_no "Disable APT Install-Recommends and Install-Suggests? (1.2.1.2)"; then
-        # We use "0" as it is the most universally recognized boolean format for apt
         echo 'APT::Install-Recommends "0";' > "$apt_conf"
         echo 'APT::Install-Suggests "0";' >> "$apt_conf"
         chmod 644 "$apt_conf"
