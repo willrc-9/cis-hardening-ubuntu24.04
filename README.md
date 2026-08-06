@@ -27,6 +27,8 @@ A hardening script for Ubuntu 24.04 based on the CIS Ubuntu 24.04 v2.0.0 Level 1
 ## Important Notes
 
 * Add in custom Banner to the 09 and 10 in /controls
+* Add your whitelist of ports before running apply
+* Configure PAM to follow policies
 
 ## License
 
