@@ -1,9 +1,4 @@
- - add a y/n option for controls
- - probably a good idea to add a y/n and prompt for 1.4.1, bootloader password for future cases when you may want that
- - add a y/n for filesystems, find out the best way to go about keeping and removing fs
-
-
- *** WARNING QUEEN ANNE'S COUNTY (QAC) IT SYSTEM ***
+*** WARNING QUEEN ANNE'S COUNTY (QAC) IT SYSTEM ***
  You are accessing a system owned and operated by Queen Anne's County.
  Use of this system is restricted to authorized users only and by continuing to use this system, you agree to do so in accordance with the IT Acceptable Use Policy (700-001).
  Systems and networks are monitored for security purposes.
