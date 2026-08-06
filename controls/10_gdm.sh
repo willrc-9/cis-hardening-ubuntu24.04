@@ -21,7 +21,8 @@ manage_gdm() {
             log_warn "Audit Failed (1.7.1): GDM login banner is not enabled."
             failed=1
         fi
-        if ! grep -q "disable-user-list=true" "$gdm_db_dir/"* 2>/dev/nu *** WARNING QUEEN ANNE\'S COUNTY (QAC) IT SYSTEM ***ll; then
+        #                                                       # Put the first line of message here
+        if ! grep -q "disable-user-list=true" "$gdm_db_dir/"* 2>/dev/nu ADD CUSTOM MESSAGE HERE; then
             log_warn "Audit Failed (1.7.2): GDM disable-user-list is not configured."
             failed=1
         fi
