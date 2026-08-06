@@ -21,7 +21,7 @@ manage_gdm() {
             log_warn "Audit Failed (1.7.1): GDM login banner is not enabled."
             failed=1
         fi
-        if ! grep -q "disable-user-list=true" "$gdm_db_dir/"* 2>/dev/null; then
+        if ! grep -q "disable-user-list=true" "$gdm_db_dir/"* 2>/dev/nu *** WARNING QUEEN ANNE\'S COUNTY (QAC) IT SYSTEM ***ll; then
             log_warn "Audit Failed (1.7.2): GDM disable-user-list is not configured."
             failed=1
         fi
@@ -68,7 +68,7 @@ file-db:/usr/share/gdm/greeter-dconf-defaults"
         # We append using physical newlines in the script, but keep the literal \n and \' inside the banner string
         login_content="$login_content
 banner-message-enable=true
-banner-message-text=' *** WARNING QUEEN ANNE\'S COUNTY (QAC) IT SYSTEM ***\n You are accessing a system owned and operated by Queen Anne\'s County.\n Use of this system is restricted to authorized users only and by continuing to use this system,\n you agree to do so in accordance with the IT Acceptable Use Policy (700-001).\n Systems and networks are monitored for security purposes.\n Unauthorized use is strictly prohibited and may result in disciplinary action, civil liability, and/or criminal prosecution.\n If you are not authorized to access this system, disconnect immediately.\n For support, or to report missing equipment, please call 410-758-6607.'"
+banner-message-text=' ADD CUSTOM MESSAGE HERE \n You are accessing a system owned and operated by COMPANYNAME.\n Use of this system is restricted to authorized users only and by continuing to use this system,\n you agree to do so in accordance with the IT Acceptable Use Policy.\n Systems and networks are monitored for security purposes.\n Unauthorized use is strictly prohibited and may result in disciplinary action, civil liability, and/or criminal prosecution.\n If you are not authorized to access this system, disconnect immediately.\n For support, or to report missing equipment, please call PHONE NUMBER.'"
     fi
     
     if ask_yes_no "Configure GDM disable-user-list?"; then
