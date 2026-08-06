@@ -2,14 +2,9 @@
 
 manage_banners() {
 	local failed=0
-	local banner_text=" *** WARNING QUEEN ANNE'S COUNTY (QAC) IT SYSTEM ***
- You are accessing a system owned and operated by Queen Anne's County.
- Use of this system is restricted to authorized users only and by continuing to use this system,
- you agree to do so in accordance with the IT Acceptable Use Policy (700-001).
- Systems and networks are monitored for security purposes.
- Unauthorized use is strictly prohibited and may result in disciplinary action, civil liability, and/or criminal prosecution.
- If you are not authorized to access this system, disconnect immediately.
- For support, or to report missing equipment, please call 410-758-6607."
+	local banner_text="Custom Message Here
+	Give a legal warning
+	Add a missing device callback number too"
 
 	local files=(
 		"/etc/motd"
