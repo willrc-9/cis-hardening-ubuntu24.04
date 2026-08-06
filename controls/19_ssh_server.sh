@@ -4,7 +4,7 @@ manage_ssh_server() {
     local failed=0
     local ssh_drop_in="/etc/ssh/sshd_config.d/60-cis-hardening.conf"
 
-    # Define standard CIS SSH parameters (Controls 5.1.5 - 5.1.22)
+    # Define standard CIS SSH parameters (Updated for OpenSCAP regex)
     local ssh_params=(
         "Banner /etc/issue.net"
         "ClientAliveInterval 300"
@@ -70,16 +70,19 @@ manage_ssh_server() {
             failed=1
         fi
 
-        # Audit SSH daemon parameters
+        # Capture the live running config ONCE, safely ignoring pipefail errors
+        local sshd_dump
+        sshd_dump=$(sshd -T 2>/dev/null || true)
+
+        # Audit SSH daemon parameters safely
         for param in "${ssh_params[@]}"; do
             local key="${param%% *}"
             local expected_val="${param#* }"
             local active_val
             
-            # Use sshd -T to evaluate the live running configuration
-            active_val=$(sshd -T 2>/dev/null | grep -i "^${key}\b" | awk '{print $2}')
+            # Safe extraction preventing SIGPIPE and set -e crashes
+            active_val=$(echo "$sshd_dump" | grep -i "^${key}\b" | awk '{print $2}' || true)
             
-            # Convert to lowercase for reliable comparison
             if [[ "${active_val,,}" != "${expected_val,,}" ]]; then
                 log_warn "Audit Failed (5.1.x): SSH parameter '$key' is set to '$active_val' (Expected: '$expected_val')."
                 failed=1
@@ -102,11 +105,9 @@ manage_ssh_server() {
             chmod 600 /etc/ssh/sshd_config
         fi
         
-        # Secure private keys (0600 root:root)
         find /etc/ssh -xdev -type f -name 'ssh_host_*_key' -exec chown root:root {} \;
         find /etc/ssh -xdev -type f -name 'ssh_host_*_key' -exec chmod 0600 {} \;
         
-        # Secure public keys (0644 root:root)
         find /etc/ssh -xdev -type f -name 'ssh_host_*_key.pub' -exec chown root:root {} \;
         find /etc/ssh -xdev -type f -name 'ssh_host_*_key.pub' -exec chmod 0644 {} \;
         
@@ -122,7 +123,6 @@ manage_ssh_server() {
             echo "$param" >> "$ssh_drop_in"
         done
         
-        # 5.1.4 Explicitly handle Allowed/Denied Users. Leaving commented by default to avoid accidental lockouts.
         echo "" >> "$ssh_drop_in"
         echo "# 5.1.4 - Ensure sshd access is configured" >> "$ssh_drop_in"
         echo "# Uncomment and configure the following to restrict access to specific users/groups:" >> "$ssh_drop_in"
@@ -131,7 +131,6 @@ manage_ssh_server() {
         
         log_success "Applied SSH parameters to $ssh_drop_in."
         
-        # Test SSH configuration before restarting
         if sshd -t; then
             systemctl restart sshd >/dev/null 2>&1 || systemctl restart ssh >/dev/null 2>&1
             log_success "SSH configuration validated and service restarted."
