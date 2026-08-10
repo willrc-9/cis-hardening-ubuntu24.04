@@ -27,14 +27,6 @@ manage_ssh_server() {
 
     # --- AUDIT MODE ---
     if [[ "$MODE" == "audit" ]]; then
-
-    # Ensure privilege separation directory exists to prevent sshd -T crashes
-        mkdir -p /run/sshd
-        chmod 0755 /run/sshd
-
-        # Capture the live running config ONCE, safely ignoring pipefail errors
-        local sshd_dump
-        sshd_dump=$(sshd -T 2>/dev/null || true)
         
         # 5.1.1 Ensure access to /etc/ssh/sshd_config is configured
         if [[ -f /etc/ssh/sshd_config ]]; then
@@ -78,6 +70,10 @@ manage_ssh_server() {
             failed=1
         fi
 
+        # Ensure privilege separation directory exists to prevent sshd -T crashes
+        mkdir -p /run/sshd
+        chmod 0755 /run/sshd
+
         # Capture the live running config ONCE, safely ignoring pipefail errors
         local sshd_dump
         sshd_dump=$(sshd -T 2>/dev/null || true)
@@ -106,12 +102,6 @@ manage_ssh_server() {
     # --- APPLY MODE ---
     log_info "Applying control: Configure SSH Server (CIS 5.1.x)"
 
-    # Ensure privilege separation directory exists to prevent sshd -t crashes
-        mkdir -p /run/sshd
-        chmod 0755 /run/sshd
-        
-        if sshd -t; then[cite: 7]
-
     # 5.1.1 - 5.1.3 Secure SSH file permissions
     if ask_yes_no "Restrict permissions on SSH configuration and host key files (5.1.1 - 5.1.3)?"; then
         if [[ -f /etc/ssh/sshd_config ]]; then
@@ -139,12 +129,17 @@ manage_ssh_server() {
         
         echo "" >> "$ssh_drop_in"
         echo "# 5.1.4 - Ensure sshd access is configured" >> "$ssh_drop_in"
-        echo "# Uncomment and configure the following to restrict access to specific users/groups:" >> "$ssh_drop_in"
-        echo "# AllowUsers <username>" >> "$ssh_drop_in"
-        echo "# AllowGroups <groupname>" >> "$ssh_drop_in"
+        
+        # Dynamically grab the real user who invoked sudo, falling back to root if missing
+        local admin_user="${SUDO_USER:-root}"
+        echo "AllowUsers $admin_user" >> "$ssh_drop_in"
         
         log_success "Applied SSH parameters to $ssh_drop_in."
         
+        # Ensure privilege separation directory exists to prevent sshd -t crashes
+        mkdir -p /run/sshd
+        chmod 0755 /run/sshd
+
         if sshd -t; then
             systemctl restart sshd >/dev/null 2>&1 || systemctl restart ssh >/dev/null 2>&1
             log_success "SSH configuration validated and service restarted."
