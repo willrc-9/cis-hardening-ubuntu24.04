@@ -27,6 +27,14 @@ manage_ssh_server() {
 
     # --- AUDIT MODE ---
     if [[ "$MODE" == "audit" ]]; then
+
+    # Ensure privilege separation directory exists to prevent sshd -T crashes
+        mkdir -p /run/sshd
+        chmod 0755 /run/sshd
+
+        # Capture the live running config ONCE, safely ignoring pipefail errors
+        local sshd_dump
+        sshd_dump=$(sshd -T 2>/dev/null || true)
         
         # 5.1.1 Ensure access to /etc/ssh/sshd_config is configured
         if [[ -f /etc/ssh/sshd_config ]]; then
@@ -97,6 +105,12 @@ manage_ssh_server() {
 
     # --- APPLY MODE ---
     log_info "Applying control: Configure SSH Server (CIS 5.1.x)"
+
+    # Ensure privilege separation directory exists to prevent sshd -t crashes
+        mkdir -p /run/sshd
+        chmod 0755 /run/sshd
+        
+        if sshd -t; then[cite: 7]
 
     # 5.1.1 - 5.1.3 Secure SSH file permissions
     if ask_yes_no "Restrict permissions on SSH configuration and host key files (5.1.1 - 5.1.3)?"; then
