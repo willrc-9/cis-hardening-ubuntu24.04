@@ -7,13 +7,13 @@ manage_process_hardening() {
 
 	# Define the CIS required sysctl parameters
 	declare -A sysctls=(
-	["fs.protected_hardlinks"]="1"
-	["fs.protected_symlinks"]="1"
-	["kernel.yama.ptrace_scope"]="1"
-	["fs.suid_dumpable"]="0"
-	["kernel.dmesg_restrict"]="1"
-	["kernel.kptr_restrict"]="2"
-	["kernel.randomize_va_space"]="2"
+		["fs.protected_hardlinks"]="1"
+		["fs.protected_symlinks"]="1"
+		["kernel.yama.ptrace_scope"]="1"
+		["fs.suid_dumpable"]="0"
+		["kernel.dmesg_restrict"]="1"
+		["kernel.kptr_restrict"]="2"
+		["kernel.randomize_va_space"]="2"
 	)
 
 	# --- AUDIT MODE ---
@@ -64,41 +64,44 @@ manage_process_hardening() {
 		return $failed
 	fi
 
-	
 
 	# --- APPLY MODE ---
-    log_info "Applying control: Process Hardening"
-    > "$sysctl_conf"
-    for key in "${!sysctls[@]}"; do
-        if ask_yes_no "Apply sysctl parameter: $key = ${sysctls[$key]}?"; then
-            echo "$key = ${sysctls[$key]}" >> "$sysctl_conf"
-            sysctl -w "$key=${sysctls[$key]}" >/dev/null 2>&1 || true
-            log_success "Applied $key"
-        fi
-    done
+	log_info "Applying control: Process Hardening"
+    
+	if ask_yes_no "Apply strict kernel sysctl parameters (including kptr_restrict)?"; then
+		# Safely recreate the sysctl file without prematurely destroying it
+		echo "# CIS System Kernel Hardening" > "$sysctl_conf"
+		for key in "${!sysctls[@]}"; do
+			echo "$key = ${sysctls[$key]}" >> "$sysctl_conf"
+			sysctl -w "$key=${sysctls[$key]}" >/dev/null 2>&1 || true
+			log_success "Applied $key"
+		done
+		# Force the system to reload the drop-in file immediately
+		sysctl -p "$sysctl_conf" >/dev/null 2>&1 || true
+	fi
 
-    if ask_yes_no "Remove 'prelink' package?"; then
-        DEBIAN_FRONTEND=noninteractive apt-get purge -y prelink >/dev/null 2>&1 || true
-        log_success "Removed prelink"
-    fi
+	if ask_yes_no "Remove 'prelink' package?"; then
+		DEBIAN_FRONTEND=noninteractive apt-get purge -y prelink >/dev/null 2>&1 || true
+		log_success "Removed prelink"
+	fi
 
-    if ask_yes_no "Disable Automatic Error Reporting (apport)?"; then
-        systemctl stop apport.service >/dev/null 2>&1 || true
-        systemctl disable apport.service >/dev/null 2>&1 || true
-        systemctl mask apport.service >/dev/null 2>&1 || true
-        log_success "Disabled apport"
-    fi
+	if ask_yes_no "Disable Automatic Error Reporting (apport)?"; then
+		systemctl stop apport.service >/dev/null 2>&1 || true
+		systemctl disable apport.service >/dev/null 2>&1 || true
+		systemctl mask apport.service >/dev/null 2>&1 || true
+		log_success "Disabled apport"
+	fi
 
-    if ask_yes_no "Configure systemd-coredump?"; then
-        if [[ ! -f "$coredump_conf" ]]; then touch "$coredump_conf"; chmod 644 "$coredump_conf"; chown root:root "$coredump_conf"; else backup_file "$coredump_conf"; fi
-        if ! grep -q "^\[Coredump\]" "$coredump_conf"; then echo "[Coredump]" >> "$coredump_conf"; fi
-        sed -i '/^Storage=/d' "$coredump_conf"
-        sed -i '/^ProcessSizeMax=/d' "$coredump_conf"
-        echo "Storage=none" >> "$coredump_conf"
-        echo "ProcessSizeMax=0" >> "$coredump_conf"
-        systemctl daemon-reload >/dev/null 2>&1 || true
-        log_success "Configured systemd-coredump"
-    fi
+	if ask_yes_no "Configure systemd-coredump?"; then
+		if [[ ! -f "$coredump_conf" ]]; then touch "$coredump_conf"; chmod 644 "$coredump_conf"; chown root:root "$coredump_conf"; else backup_file "$coredump_conf"; fi
+		if ! grep -q "^\[Coredump\]" "$coredump_conf"; then echo "[Coredump]" >> "$coredump_conf"; fi
+		sed -i '/^Storage=/d' "$coredump_conf"
+		sed -i '/^ProcessSizeMax=/d' "$coredump_conf"
+		echo "Storage=none" >> "$coredump_conf"
+		echo "ProcessSizeMax=0" >> "$coredump_conf"
+		systemctl daemon-reload >/dev/null 2>&1 || true
+		log_success "Configured systemd-coredump"
+	fi
 }
 
 run_process_hardening() {
