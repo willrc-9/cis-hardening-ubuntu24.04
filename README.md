@@ -79,16 +79,15 @@ A hardening script for Ubuntu 24.04 based on the CIS Ubuntu 24.04 v2.0.0 Level 1
   * 5.4.X.X - User Accounts and Environment
     * user_accounts
 * 6 - Logging and Auditing
-    * a
-    * a
-    * a
-    * a
-    * a
-    * a
-    * a
-    * a
-    * a
-    * a
+  * 6.1.X.X - System Logging
+    * system_logging
+  * 6.2.X.X - Configure system auditd service
+    * auditd
+  * 6.3.X - Configure Integrity Checking
+    * system_file_permissions
+* 7 - System Maintenance
+  * 7.X.X - System Maintenance (all)
+    * system_maintenance
 
 ## License
 
