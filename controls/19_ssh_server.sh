@@ -6,7 +6,7 @@ manage_ssh_server() {
 
     # Define standard CIS SSH parameters (Updated for OpenSCAP regex)
     local ssh_params=(
-        "Banner /etc/issue.net"
+        "banner /etc/issue.net"
         "ClientAliveInterval 300"
         "ClientAliveCountMax 3"
         "X11Forwarding no"
