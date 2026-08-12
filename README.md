@@ -49,6 +49,45 @@ A hardening script for Ubuntu 24.04 based on the CIS Ubuntu 24.04 v2.0.0 Level 1
     * banners
   * 1.7.X (Workstation Only)
     * gdm
+* 2 - Services
+  * 2.1.X - Configure Server Services
+    * server_services
+  * 2.2.X - Configure Client Services
+    * client_services
+  * 2.3.X.X - Configure Time Synchronization
+    * time_sync
+  * 2.4.X.X
+    * job_schedulers
+* 3 - Network
+  * 3.1.X - Configure Network Devices
+    * network_devices
+  * 3.2.X - Configure Network Kernel Modules
+    * network_modules
+  * 3.3.X.X - Configure Network Kernel Parameters
+    * network_parameters
+* 4 - Host Based Firewall
+  * 4.1.X - Configure Uncomplicated Firewall (ufw)
+    * host_firewall
+* 5 - Access Control
+    * a
+    * a
+    * a
+    * a
+    * a
+    * a
+    * a
+    * a
+    * a
+    * a
+    * a
+    * a
+    * a
+    * a
+    * a
+    * a
+    * a
+    * a
+    * a
 
 ## License
 
