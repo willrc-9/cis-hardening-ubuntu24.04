@@ -1,5 +1,22 @@
 #!/usr/bin/env bash
 
+service_check() {
+	local service_name="$1"
+	local output=""
+		if systemctl is-enabled -q "$service_name" 2>/dev/null; then
+			output="$output\n - Daemon: \"$service_name\" is enabled on the system"
+		else
+			output="$output\n - Daemon: \"$service_name\" is not enabled on the system"
+		fi
+		if systemctl is-active -q "$service_name" 2>/dev/null; then
+			output="$output\n - Daemon: \"$service_name\" is active on the system"
+		else
+			output="$output\n - Daemon: \"$service_name\" is not active on the system"
+		fi
+	echo -e "$output"
+}
+
+
 manage_time_sync() {
     local failed=0
     local timesyncd_conf="/etc/systemd/timesyncd.conf"
@@ -76,6 +93,11 @@ manage_time_sync() {
     echo ""
     echo "Only ONE time synchronization method should be in use on the system."
     echo "Configuring multiple methods could lead to unexpected or unreliable results."
+    echo ""
+    echo ""
+    echo "Current Configuration:"
+    service_check chrony.service
+    service_check systemd-timesyncd.service
     echo "--------------------------------------------------------------------------------"
 
     if ask_yes_no "Are you using host-based time synchronization for this machine? (Select 'y' to SKIP this section)"; then
