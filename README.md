@@ -32,22 +32,23 @@ A hardening script for Ubuntu 24.04 based on the CIS Ubuntu 24.04 v2.0.0 Level 1
 
 ## Guide for reading error messages
 * 1 - Initial Setup
-  * 1.1.1.X
-    * filesystems
-    * kernel_modules
-  * 1.1.2.X
-    * tmp_mounts
-  * 1.2.X.X
+  * 1.1.X.X - Filesystem
+    * 1.1.1.X - Configure Filesystem Kernel Modules
+      * filesystems
+      * kernel_modules
+    * 1.1.2.X - Configure Filesystem Partitions
+      * tmp_mounts
+  * 1.2.X.X - Package Management
     * software_updates
-  * 1.3.1.X
+  * 1.3.1.X - Mandatory Access Control
     * apparmor
-  * 1.4.X
+  * 1.4.X - Configure Bootloader
     * bootloader
-  * 1.5.X
+  * 1.5.X - Cpnfigure Additional Process Hardening
     * process_hardening
-  * 1.6.X
+  * 1.6.X - Configure Command Line Warning
     * banners
-  * 1.7.X (Workstation Only)
+  * 1.7.X - Configure GNOME Display Manager (Workstation Only)
     * gdm
 * 2 - Services
   * 2.1.X - Configure Server Services
@@ -69,15 +70,15 @@ A hardening script for Ubuntu 24.04 based on the CIS Ubuntu 24.04 v2.0.0 Level 1
   * 4.1.X - Configure Uncomplicated Firewall (ufw)
     * host_firewall
 * 5 - Access Control
-    * a
-    * a
-    * a
-    * a
-    * a
-    * a
-    * a
-    * a
-    * a
+  * 5.1.X - Configure SSH Server
+    * ssh_server
+  * 5.2.X - Configure Privilege Escalation
+    * privilege_escalation
+  * 5.3.X.X - Pluggable Authentication Modules (PAM)
+    * pam
+  * 5.4.X.X - User Accounts and Environment
+    * user_accounts
+* 6 - Logging and Auditing
     * a
     * a
     * a
