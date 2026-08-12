@@ -9,7 +9,8 @@ manage_ssh_server() {
         "Banner /etc/issue.net"
         "ClientAliveInterval 300"
         "ClientAliveCountMax 3"
-        "X11Forwarding no"
+        "DisableForwarding yes"
+	"X11Forwarding no"
         "AllowTcpForwarding no"
         "GSSAPIAuthentication no"
         "HostbasedAuthentication no"
@@ -90,7 +91,10 @@ manage_ssh_server() {
             if [[ "${active_val,,}" != "${expected_val,,}" ]]; then
                 log_warn "Audit Failed (5.1.x): SSH parameter '$key' is set to '$active_val' (Expected: '$expected_val')."
                 failed=1
-            fi
+	    else 
+	    	log_success "Audit Passed (5.1.X) SSH parameter '$key' is set to '$active_val'."
+	    fi
+
         done
 
         if [[ $failed -eq 0 ]]; then
