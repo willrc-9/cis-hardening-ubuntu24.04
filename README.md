@@ -30,6 +30,19 @@ A hardening script for Ubuntu 24.04 based on the CIS Ubuntu 24.04 v2.0.0 Level 1
 * Add your whitelist of ports before running apply
 * Configure PAM to follow policies
 
+## Guide for reading error messages
+
+* 1.1.1.X
+* * filesystems
+* * kernel_modules
+* 1.1.2.X
+* * tmp_mounts
+* 1.2.X.X
+* * software_updates
+* 1.3.1.X
+* * apparmor
+* 
+
 ## License
 
 Copyright (c) 2026 William Collison. All rights reserved.
