@@ -30,6 +30,7 @@ A hardening script for Ubuntu 24.04 based on the CIS Ubuntu 24.04 v2.0.0 Level 1
 * Add your whitelist of ports before running apply
 * Configure PAM to follow policies
 * 6.1.2.5 - Ensure rsyslog is configured to send logs to a remote log host must be MANUALLY configure, not included in script
+* Manually configure /tmp mountpoint
 
 ## Guide for reading error messages
 * 1 - Initial Setup
