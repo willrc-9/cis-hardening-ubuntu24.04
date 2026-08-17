@@ -89,6 +89,24 @@ manage_process_hardening() {
 		systemctl stop apport.service >/dev/null 2>&1 || true
 		systemctl disable apport.service >/dev/null 2>&1 || true
 		systemctl mask apport.service >/dev/null 2>&1 || true
+		# 1. Edit the configuration file
+			if [[ -f /etc/default/apport ]]; then
+   				# Check if the 'enabled=' parameter already exists in the file
+    				if grep -q "^enabled=" /etc/default/apport; then
+        			# If it exists, use sed to swap whatever number is there to a 0
+        			sed -i 's/^enabled=.*/enabled=0/' /etc/default/apport
+   	 		else
+        			# If the parameter is missing entirely, append it to the bottom
+        			echo "enabled=0" >> /etc/default/apport
+    			fi
+    		log_success "Set enabled=0 in /etc/default/apport"
+	fi
+
+# 2. Stop and mask the service
+# We add || true to the stop command so the script doesn't crash if the service is already stopped!
+systemctl stop apport.service 2>/dev/null || true
+systemctl mask apport.service
+log_success "Stopped and masked apport.service"
 		log_success "Disabled apport"
 	fi
 

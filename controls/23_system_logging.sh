@@ -53,6 +53,10 @@ manage_system_logging() {
             failed=1
         fi
 
+	if ! dpkg-query -s rsyslog-gnutls 2>/dev/null; then
+		log_warn "rsyslog-gnutls is not installed."
+	fi
+
         if [[ $failed -eq 0 ]]; then
             log_success "Audit Passed: System logging (journald/rsyslog) is securely configured."
         fi
@@ -92,6 +96,10 @@ manage_system_logging() {
             DEBIAN_FRONTEND=noninteractive apt-get install -y rsyslog >/dev/null 2>&1
             log_success "Installed rsyslog."
         fi
+    fi
+
+    if ask_yes_no "Install rsyslog-gnutls?"; then
+	    apt install rsyslog-gnutls
     fi
 
     if dpkg-query -s rsyslog >/dev/null 2>&1; then

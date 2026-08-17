@@ -40,7 +40,7 @@ manage_host_firewall() {
         fi
 
         # 4.1.4 Ensure ufw outgoing default is configured
-        if ! echo "$ufw_defaults" | grep -Eq "(allow|deny|reject) \(outgoing\)"; then
+        if ! echo "$ufw_defaults" | grep -Eq "(deny|reject) \(outgoing\)"; then
             log_warn "Audit Failed (4.1.4): UFW default outgoing policy is not securely configured."
             failed=1
         fi
@@ -95,7 +95,7 @@ manage_host_firewall() {
     # 4.1.3 - 4.1.5 Configure default policies
     if ask_yes_no "Configure strict default UFW policies (Incoming: deny, Outgoing: allow, Routed: deny)?"; then
         ufw default deny incoming >/dev/null 2>&1
-        ufw default allow outgoing >/dev/null 2>&1
+        ufw default deny outgoing >/dev/null 2>&1
         ufw default deny routed >/dev/null 2>&1
         log_success "Configured default UFW traffic policies."
     fi
@@ -106,6 +106,24 @@ manage_host_firewall() {
         # Use --force to bypass the interactive prompt UFW gives when enabling via command line
         ufw --force enable >/dev/null 2>&1
         log_success "Enabled and activated UFW."
+    fi
+
+    # Process the UFW_ALLOWLIST from the global config
+    if [[ -n "${UFW_ALLOWLIST[*]}" ]]; then
+        if ask_yes_no "Allow configured ports from UFW_ALLOWLIST (HTTP, HTTPS, NTP, DNS, etc.)?"; then
+            for port in "${UFW_ALLOWLIST[@]}"; do
+                # Skip any commented out or empty elements
+                [[ -z "$port" || "$port" == \#* ]] && continue
+                
+                # 1. Allow Incoming (for hosting services)
+                ufw allow "$port" >/dev/null 2>&1
+                
+                # 2. Allow Outgoing (CRITICAL for downloading updates and DNS)
+                ufw allow out "$port" >/dev/null 2>&1
+                
+                log_success "Allowed IN and OUT for port/service: $port"
+            done
+        fi
     fi
 
     log_success "Host based firewall configuration applied."

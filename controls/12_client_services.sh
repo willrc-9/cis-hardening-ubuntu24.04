@@ -11,6 +11,7 @@ manage_client_services() {
         ["2.2.4 telnet client"]="telnet"
         ["2.2.5 ldap client"]="ldap-utils"
         ["2.2.6 ftp client"]="ftp"
+	["2.2.6 tnftp client"]="tnftp"
     )
 
     # Use mapfile to safely sort keys with spaces in them

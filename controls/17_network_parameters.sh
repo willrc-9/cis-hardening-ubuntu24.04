@@ -61,9 +61,9 @@ manage_network_parameters() {
             local param="${setting%%=*}"
             local expected="${setting##*=}"
             
-            # Check if the parameter exists in the running kernel (e.g., IPv6 might be disabled completely)
-            if ! sysctl -a 2>/dev/null | grep -q "^${param}\b"; then
-                continue # Skip auditing parameters that don't exist in the current kernel
+            # Check if the parameter is supported by the running kernel
+            if ! sysctl "$param" >/dev/null 2>&1; then
+                continue # Skip parameters unsupported by the active kernel
             fi
 
             # Check the live running configuration
@@ -74,8 +74,9 @@ manage_network_parameters() {
                 failed=1
             fi
 
-            # Check if it is persistently configured in a sysctl configuration file
-            if ! grep -Eq "^[[:space:]]*${param}[[:space:]]*=[[:space:]]*${expected}\b" /etc/sysctl.d/*.conf /etc/sysctl.conf 2>/dev/null; then
+            # Check persistent configuration in /etc/sysctl.d/ or /etc/sysctl.conf
+            # Using grep -F ensures '.' is treated as a literal period rather than a wildcard
+            if ! grep -Eqs "^[[:space:]]*${param}[[:space:]]*=[[:space:]]*${expected}\b" /etc/sysctl.d/*.conf /etc/sysctl.conf 2>/dev/null; then
                 log_warn "Audit Failed (3.3.x): '$param' is not persistently set to '$expected' in /etc/sysctl.d/ or /etc/sysctl.conf."
                 failed=1
             fi
@@ -98,14 +99,13 @@ manage_network_parameters() {
         local expected="${setting##*=}"
         local prompt="${entry##*|}"
         
-        # Only ask and attempt to apply if the parameter is supported by the kernel
-        if sysctl -a 2>/dev/null | grep -q "^${param}\b"; then
+        # Direct check for kernel parameter support
+        if sysctl "$param" >/dev/null 2>&1; then
             if ask_yes_no "Enforce: $prompt ($param=$expected)?"; then
                 # Apply live
                 sysctl -w "$param=$expected" >/dev/null 2>&1 || true
                 
                 # Apply persistently
-                # Remove any existing misconfigured lines from our target file to prevent duplicates
                 if [[ -f "$sysctl_conf" ]]; then
                     sed -i "/^[[:space:]]*${param}[[:space:]]*=/d" "$sysctl_conf"
                 fi
@@ -120,7 +120,7 @@ manage_network_parameters() {
         fi
     done
 
-    # Flush the sysctl settings to disk to ensure they take immediate priority
+    # Load and verify settings across the system
     sysctl --system >/dev/null 2>&1 || true
 
     log_success "Network kernel parameters configuration applied."
