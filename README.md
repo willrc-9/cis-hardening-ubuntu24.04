@@ -29,6 +29,7 @@ A hardening script for Ubuntu 24.04 based on the CIS Ubuntu 24.04 v2.0.0 Level 1
 * Add in custom Banner to the 09 and 10 in /controls
 * Add your whitelist of ports before running apply
 * Configure PAM to follow policies
+* 6.1.2.5 - Ensure rsyslog is configured to send logs to a remote log host must be MANUALLY configure, not included in script
 
 ## Guide for reading error messages
 * 1 - Initial Setup
